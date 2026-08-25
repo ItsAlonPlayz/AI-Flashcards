@@ -8,7 +8,17 @@ load_dotenv()
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 if not API_KEY:
-    raise ValueError("Missing OPENROUTER_API_KEY. Check your .env file!")
+    try:
+        import streamlit as st
+
+        API_KEY = st.secrets["OPENROUTER_API_KEY"]
+    except Exception:
+        pass
+
+if not API_KEY:
+    raise ValueError(
+        "Missing OPENROUTER_API_KEY! Set it in your .env file or Streamlit Cloud Secrets."
+    )
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -41,7 +51,6 @@ def generate_flashcard_text(raw_note):
 
 
 def parse_notes(raw_output):
-    """Parses multi-line 'Term : Definition' AI responses into a list of flashcard dicts."""
     flashcards = []
     lines = raw_output.strip().split("\n")
 
