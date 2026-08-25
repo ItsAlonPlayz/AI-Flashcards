@@ -22,32 +22,37 @@ def generate_flashcard_text(raw_note):
         messages=[
             {
                 "role": "system",
-                "content": "You are a flashcard generator. Convert user input into a single line formatted strictly as 'Term : Definition'.",
+                "content": (
+                    "You are a flashcard generator. Convert user input into flashcards.\n"
+                    "RULES:\n"
+                    "1. Only create flashcards for core, distinct facts. Do NOT split a single concept into micro-facts.\n"
+                    "2. Output format must strictly be 'Term : Definition' on each line.\n"
+                    "3. Do not include intro text, numbering, or bullet points."
+                ),
             },
             {"role": "user", "content": raw_note},
         ],
         extra_body={"reasoning": {"effort": "none"}},
-        max_tokens=60,
+        max_tokens=300,
     )
 
     message = response.choices[0].message
-    content = message.content or ""
-
-    # Parse out the 'Term : Definition' pair even if the model surrounds it with extra text
-    match = re.search(r"([^:\n]+?\s*:\s*[^:\n]+)", content)
-    if match:
-        return match.group(1).strip()
-
-    return content.strip()
+    return message.content or ""
 
 
-def parse_notes(notes_list):
+def parse_notes(raw_output):
+    """Parses multi-line 'Term : Definition' AI responses into a list of flashcard dicts."""
     flashcards = []
+    lines = raw_output.strip().split("\n")
 
-    for note in notes_list:
-        colon_index = note.find(":")
-        if colon_index != -1:
-            front = note[:colon_index].strip()
-            back = note[colon_index + 1 :].strip()
-            flashcards.append({"front": front, "back": back})
+    for line in lines:
+        match = re.search(r"([^:\n]+?\s*:\s*[^:\n]+)", line)
+        if match:
+            pair = match.group(1)
+            colon_index = pair.find(":")
+            front = pair[:colon_index].strip()
+            back = pair[colon_index + 1 :].strip()
+            if front and back:
+                flashcards.append({"front": front, "back": back})
+
     return flashcards
